@@ -44,7 +44,8 @@ class TestConection(unittest.TestCase):
                 client_thread.start()
 
             except Exception as e:
-                break
+                print(e)
+                self.assertTrue(False)
 
 
     def set_up_server(self):
@@ -60,13 +61,13 @@ class TestConection(unittest.TestCase):
             self.server.listen(0)
             self.server_status = 1
             self.server_thread = Thread(target = self.runnable)
-            self.server.daemon = True
+            self.server_thread.daemon = True
             self.server_thread.start()
-        except:
-            print('Localhost is already in use, close the terminal and run the test again.')
-            self.assertTrue(False)
+        except Exception as e:
+            print('Failed to set up server.')
+            self.assertTrue(server_status)
 
-    def test_client_connection(self):
+    def client_connection(self):
         self.server_clients = {}
         s = socket()
         client_1 = Client(s, '...', 'Marco')
@@ -98,15 +99,12 @@ class TestConection(unittest.TestCase):
 
 
     def test_client(self):
-        try:
-            self.set_up_server()
-            sleep(1)
-            self.test_client_connection()
-            sleep(1)
-            self.server_status = 0
-            self.server_thread.join()
-        except AssertionError:
-            self.server.close()
+        self.set_up_server()
+        sleep(1)
+        self.client_connection()
+        sleep(1)
+        self.server_status = 0
+        self.server_thread.join()
 
 if __name__ == '__main__':
 
