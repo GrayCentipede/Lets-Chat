@@ -1,4 +1,5 @@
 from socket import socket
+import sys
 
 class Client(object):
 
@@ -31,6 +32,7 @@ class Client(object):
         try:
             self.socket.close()
             self.is_connected = False
+            print('The conection between the server and you has been closed.')
         except Exception as e:
             print(e)
 
@@ -38,34 +40,34 @@ class Client(object):
         return self.is_connected
 
     def receive_from_server(self):
+        msg = '...'
         while True:
             try:
-                if (self.is_connected):
+                if (self.is_connected) and (msg):
                     msg = self.socket.recv(self.buffer_size).decode('utf8')
                     print(msg)
                 else:
                     break
-            except OSError:
-                break
+            except Exception as e:
+                print('Exception occurred on receive')
+        if (self.is_connected):
+            self.disconnect()
 
     def send_msg(self):
-        while True:
-            addressee = raw_input('Who do you wanna talk with? ').strip()
+        while self.is_connected:
+            try:
+                addressee = raw_input('Who do you wanna talk with? ').strip()
 
-            if (addressee == 'no one'):
-                self.socket.send(bytes(addressee).encode('utf8'))
-                self.disconnect()
-                break
+                if (addressee == 'no one'):
+                    self.socket.send(bytes(addressee).encode('utf8'))
+                    self.disconnect()
+                    break
 
-            msg = raw_input('Write something cute: ').strip()
-            self.send_msg_to(addressee, msg)
+                msg = raw_input('Write something cute: ').strip()
+                self.send_msg_to(addressee, msg)
+            except Exception as e:
+                print('A conection error occurred, you are no longer connected to the server')
 
     def send_msg_to(self, addressee, msg):
         self.socket.send(bytes(addressee).encode('utf8'))
         self.socket.send(bytes(msg).encode('utf8'))
-
-    def get_msg_list_of(self, client):
-        if (self.msg_list[client.address] != None):
-            return msg_list[client.address]
-        else:
-            print("You haven't talked with him yet.")
