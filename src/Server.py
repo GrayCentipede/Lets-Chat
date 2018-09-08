@@ -2,8 +2,8 @@ from socket import AF_INET, socket, SOCK_STREAM, SOL_SOCKET, SO_REUSEADDR
 from threading import Thread
 import signal
 
-from Client import Client
-from Room import Room
+from .Client import Client
+from .Room import Room
 
 class Server(object):
     buffer_size = 1024
@@ -46,9 +46,11 @@ class Server(object):
             print('An error has occurred while trying to lift the server: ' + str(e))
 
     def close(self):
+        print('Shutting down server {}'.format(self.host))
         self.send_msg_to_all(self.server_id, 'The server {} is shutting down. Thanks for staying.'.format(self.host))
         self.server_status = 0
-        for address in self.clients:
+        copy = self.clients.copy()
+        for address in copy:
             client = self.clients[address]
             self.disconnect_client(client)
 
@@ -58,7 +60,7 @@ class Server(object):
 
         if (str(author) == self.server_id):
             prefix = '@' + self.server_id + ' : '
-            addressee.socket.send(bytes(prefix + msg).encode('utf8'))
+            addressee.socket.send(bytes(prefix + msg, 'utf8'))
             return
 
         prefix = '@' + author.name + ' : '
@@ -69,9 +71,9 @@ class Server(object):
                 break
 
         if (not is_server) and (author.address != client.address):
-            author.socket.send(bytes(prefix + msg).encode('utf8'))
+            author.socket.send(bytes(prefix + msg, 'utf8'))
 
-        client.socket.send(bytes(prefix + msg).encode('utf8'))
+        client.socket.send(bytes(prefix + msg, 'utf8'))
 
     def send_msg_to_all(self, author, msg):
         if (str(author) == self.server_id):
@@ -80,11 +82,11 @@ class Server(object):
             prefix = '@' + author.name + ' :'
         for address in self.clients:
             client = self.clients[address]
-            client.socket.send(bytes(prefix + msg).encode('utf8'))
+            client.socket.send(bytes(prefix + msg, 'utf8'))
 
     def disconnect_client(self, client):
         try:
-            client.socket.send((bytes('Goodbye').encode('utf8')))
+            client.socket.send((bytes('Goodbye', 'utf8')))
             client.socket.close()
         except:
             pass
@@ -118,6 +120,7 @@ class Server(object):
                 else:
                     self.send_msg_to_all(client, msg)
         except Exception as e:
+            print(e)
             self.disconnect_client(client)
 
     def accept_conections(self):
@@ -128,6 +131,7 @@ class Server(object):
                 print('{} has connected'.format(client_address))
                 client = self.Conection('', client_address[1], client_socket)
                 self.clients[client_address[1]] = client
-                Thread( target = self.handle_client, args=(client,)).start()
-            except KeyboardInterrupt:
+                Thread( target = self.handle_client, args=(client,), daemon=True).start()
+            except Exception:
+                self.close()
                 break

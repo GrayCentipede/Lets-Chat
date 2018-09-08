@@ -22,9 +22,10 @@ class Client(object):
     def connect(self, host, port):
         try:
             self.socket.connect((host, port))
-            self.socket.send(bytes(self.name))
+            self.socket.send(bytes(self.name, 'utf8'))
             self.is_connected = True
         except Exception as e:
+            print(e)
             print('Failed to connect {}'.format(host))
             sys.exit()
 
@@ -56,18 +57,20 @@ class Client(object):
     def send_msg(self):
         while self.is_connected:
             try:
-                addressee = raw_input('Who do you wanna talk with? ').strip()
+                addressee = input('Who do you wanna talk with? ').strip()
 
                 if (addressee == 'no one'):
-                    self.socket.send(bytes(addressee).encode('utf8'))
+                    self.socket.send(bytes(addressee, 'utf8'))
                     self.disconnect()
                     break
 
-                msg = raw_input('Write something cute: ').strip()
+                msg = input('Write something cute: ').strip()
                 self.send_msg_to(addressee, msg)
             except Exception as e:
+                print(e)
                 print('A conection error occurred, you are no longer connected to the server')
+                break
 
     def send_msg_to(self, addressee, msg):
-        self.socket.send(bytes(addressee).encode('utf8'))
-        self.socket.send(bytes(msg).encode('utf8'))
+        self.socket.send(bytes(addressee, 'utf8'))
+        self.socket.send(bytes(msg, 'utf8'))

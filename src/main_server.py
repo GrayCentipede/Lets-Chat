@@ -1,8 +1,9 @@
 from threading import Thread
 
 import sys
+import signal
 
-from Server import Server
+from .Server import Server
 
 if __name__ == '__main__':
     args = sys.argv
@@ -10,4 +11,4 @@ if __name__ == '__main__':
         print('Usage: python Server.py host port number_of_conections')
         quit()
     server = Server(host = args[1], port = int(args[2]), num_conections = int(args[3]))
-    Thread(target=server.accept_conections).start()
+    server.accept_conections()
