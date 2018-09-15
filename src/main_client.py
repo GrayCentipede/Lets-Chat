@@ -10,8 +10,7 @@ if __name__ == '__main__':
         print('Usage: python main_client.py host port')
         quit()
 
-    name = input('Enter your name: ')
-    c = Client(name)
+    c = Client('')
     try:
         c.connect(host = args[1], port = int(args[2]))
         send_thread = Thread(target=c.send_msg)
