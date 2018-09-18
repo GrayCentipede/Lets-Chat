@@ -14,29 +14,34 @@ class TestConection(unittest.TestCase):
             self.c_socket = cl_socket
             self.c_address = cl_address
 
+    set_up_done = False
+
     def handle_client(self, client):
         while True:
-            msg = client.socket.recv(self.buffer_size).decode('utf8')
+            try:
+                msg = client.c_socket.recv(self.buffer_size).decode('utf8')
 
-            instructions = msg.split()
-            event = instructions[0]
+                instructions = msg.split()
+                if (len(instructions) > 0):
+                    event = instructions[0]
 
-            if (event == 'IDENTIFY'):
-                new_name = instructions[1]
-                c = self.clients[client.c_address]
-                self.clients[new_name] = c
-                del self.clients[client.c_address]
+                    if (event == 'IDENTIFY'):
+                        new_name = instructions[1]
+                        self.clients[new_name] = self.clients.pop(client.c_address)
+                        client.c_address = new_name
 
-            elif (event == 'MESSAGE'):
-                addressee = instructions[1]
-                content = ' '.join(instructions[i] for i in range(2, len(instructions)))
-                addressee_conection = self.clients[addressee]
-                addressee_conection.c_socket.send(bytes(content, 'utf8'))
+                    elif (event == 'MESSAGE'):
+                        addressee = instructions[1]
+                        content = ' '.join(instructions[i] for i in range(2, len(instructions)))
+                        addressee_conection = self.clients[addressee]
+                        addressee_conection.c_socket.send(bytes(content, 'utf8'))
 
-            elif (event == 'DISCONNECT'):
-                del self.clients[client.c_address]
-                self.server_counter -= 1
-                client.c_socket.close()
+                    elif (event == 'DISCONNECT'):
+                        del self.clients[client.c_address]
+                        self.server_counter -= 1
+                        client.c_socket.close()
+            except:
+                break
 
     def runnable(self):
 
@@ -49,7 +54,7 @@ class TestConection(unittest.TestCase):
             try:
                 client_socket, client_address = self.server.accept()
                 client = self.Conection(client_socket, client_address[1])
-                self.clients[client_address] = client
+                self.clients[client_address[1]] = client
                 self.server_counter += 1
                 client_thread = Thread(target = self.handle_client, args=(client,))
                 client_thread.daemon = True
@@ -64,47 +69,55 @@ class TestConection(unittest.TestCase):
         self.port = 33000
         self.buffer_size = 1024
         self.address = (self.host, self.port)
-        self.server = socket(AF_INET, SOCK_STREAM)
-        self.server.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
 
-        try:
-            self.server.bind(self.address)
-            self.server.listen(10)
-            self.server_status = 1
-            self.server_counter = 0
-            self.clients = {}
-            self.server_thread = Thread(target = self.runnable)
-            self.server_thread.daemon = True
-            self.server_thread.start()
-            sleep(0.5)
-        except Exception as e:
-            print('Failed to set up server.')
-            self.assertTrue(server_status)
+        if (not TestConection.set_up_done):
+            self.server = socket(AF_INET, SOCK_STREAM)
+            self.server.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
 
-    def test_client_is_connected(self):
+            try:
+                self.server.bind(self.address)
+                TestConection.set_up_done = True
+                self.server.listen(10)
+                self.server_status = 1
+                self.server_counter = 0
+                self.clients = {}
+                self.server_thread = Thread(target = self.runnable)
+                self.server_thread.daemon = True
+                self.server_thread.start()
+                sleep(0.5)
+            except Exception as e:
+                print(e)
+                print('Failed to set up server.')
+
+    def test_client_connect_and_disconnect(self):
         client_1 = Client(name = 'Marco', address = 'localhost')
         client_1.connect(self.host, self.port)
-        self.assertTrue(client_1.is_connected())
+        sleep(0.5)
+        self.assertTrue(client_1.is_online())
         self.assertEqual(self.server_counter, 1)
-
-    def test_client_send_msg(self):
-        self.server_counter = 0
-        client_1 = Client(name = 'Marco', address = 'localhost')
-        client_1.connect(self.host, self.port)
-        client_1.send_msg('IDENTIFY Polo')
-        self.assertEqual(client_1.get_name(), 'Polo')
-        client_2 = Client(name = 'Polo', address = 'localhost')
-        client_1.send_msg('MESSAGE Polo Hello Polo')
-        self.assertTrue('Hello Polo' in client_2.get_last_msgs())
-
-    def test_client_disconnect(self):
-        self.server_counter = 0
-        client_1 = Client(name = 'Marco', address = 'localhost')
-        client_1.connect(self.host, self.port)
-        self.assertEqual(self.server_counter, 1)
+        sleep(0.25)
         client_1.send_msg('DISCONNECT')
-        self.assertFalse(client_1.is_connected())
+        sleep(0.5)
+        self.assertFalse(client_1.is_online())
         self.assertEqual(self.server_counter, 0)
+
+    def test_client_send_and_recv_msg(self):
+        self.server_counter = 0
+        client_2 = Client(name = 'Marco', address = 'localhost')
+        client_2.connect(self.host, self.port)
+        client_2.send_msg('IDENTIFY Polo')
+        sleep(0.25)
+        self.assertEqual(client_2.get_name(), 'Polo')
+        client_3 = Client(name = 'Arthur', address = 'localhost')
+        client_3.connect(self.host, self.port)
+        client_3.send_msg('IDENTIFY Lancelot')
+        sleep(0.5)
+        client_3_listen = Thread(target = client_3.receive_from_server, daemon = True)
+        client_3_listen.start()
+        sleep(0.5)
+        client_2.send_msg('MESSAGE Lancelot Hello Lancelot')
+        sleep(0.5)
+        self.assertTrue('Hello Lancelot' in client_3.get_last_msgs())
 
 if __name__ == '__main__':
 
