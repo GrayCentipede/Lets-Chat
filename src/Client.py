@@ -10,10 +10,12 @@ class Client(object):
     name = None
     is_connected = False
     status = None
+    log = None
 
     def __init__(self, name, address = ''):
         self.socket = socket()
         self.name = name
+        self.log = []
 
     def set_address(self, address):
         self.address = address
@@ -21,11 +23,13 @@ class Client(object):
     def set_name(self, name):
         self.name = name
 
+    def get_name(self):
+        return self.name
+
     def connect(self, host, port):
         try:
             self.socket.connect((host, port))
             self.is_connected = True
-            print('Conected to ' + host)
         except Exception as e:
             print(e)
             print('Failed to connect {}'.format(host))
@@ -35,11 +39,10 @@ class Client(object):
         try:
             self.socket.close()
             self.is_connected = False
-            print('The conection between the server and you has been closed.')
         except Exception as e:
             print(e)
 
-    def is_connected(self):
+    def is_online(self):
         return self.is_connected
 
     def receive_from_server(self):
@@ -48,7 +51,7 @@ class Client(object):
             try:
                 if (self.is_connected) and (msg):
                     msg = self.socket.recv(self.buffer_size).decode('utf8')
-                    print(msg)
+                    self.log.append(msg)
                 else:
                     break
             except Exception as e:
@@ -57,35 +60,34 @@ class Client(object):
         if (self.is_connected):
             self.disconnect()
 
-    def send_msg(self):
-        while self.is_connected:
-            try:
-                msg = input('Write something cute: \n').strip()
+    def get_last_msgs(self):
+        return self.log
 
-                if (len(msg) > 0):
-                    instructions = msg.split()
-                    if ('STATUS' == instructions[0]):
-                        if (len(instructions) <= 2):
-                            if (s[1] == 'ACTIVE'):
-                                self.status = ClientStatus.ACTIVE
-                            elif (s[1] == 'BUSY'):
-                                self.status = ClientStatus.BUSY
-                            elif (s[1] == 'AWAY'):
-                                self.status = ClientStatus.AWAY
-                            else:
-                                print('Invalid argument.')
-
+    def send_msg(self, msg):
+        try:
+            if (len(msg) > 0):
+                instructions = msg.split()
+                if ('STATUS' == instructions[0]):
+                    if (len(instructions) <= 2):
+                        if (s[1] == 'ACTIVE'):
+                            self.status = ClientStatus.ACTIVE
+                        elif (s[1] == 'BUSY'):
+                            self.status = ClientStatus.BUSY
+                        elif (s[1] == 'AWAY'):
+                            self.status = ClientStatus.AWAY
                         else:
-                            print('Invalid argument')
+                            print('Invalid argument.')
 
-                    msg += '\n'
-                    self.socket.send(bytes(msg, 'utf8'))
+                    else:
+                        print('Invalid argument')
 
-                    if (msg == 'DISCONNECT'):
-                        self.disconnect()
-                        break
+                if (instructions[0] == 'IDENTIFY'):
+                    self.name = instructions[1]
 
-            except Exception as e:
-                print(e)
-                print('A conection error occurred, you are no longer connected to the server')
-                break
+                self.socket.send(bytes(msg + '\n', 'utf8'))
+
+                if (msg == 'DISCONNECT'):
+                    self.disconnect()
+
+        except Exception as e:
+            print(e)
