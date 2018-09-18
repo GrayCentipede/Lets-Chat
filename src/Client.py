@@ -1,13 +1,15 @@
 from socket import socket
 import sys
 
+from .ClientStatus import ClientStatus
+
 class Client(object):
 
-    msg_list = {}
     buffer_size = 1024
     socket = None
     name = None
     is_connected = False
+    status = None
 
     def __init__(self, name, address = ''):
         self.socket = socket()
@@ -22,8 +24,8 @@ class Client(object):
     def connect(self, host, port):
         try:
             self.socket.connect((host, port))
-            self.socket.send(bytes(self.name, 'utf8'))
             self.is_connected = True
+            print('Conected to ' + host)
         except Exception as e:
             print(e)
             print('Failed to connect {}'.format(host))
@@ -41,7 +43,7 @@ class Client(object):
         return self.is_connected
 
     def receive_from_server(self):
-        msg = '...'
+        msg = "..."
         while True:
             try:
                 if (self.is_connected) and (msg):
@@ -51,26 +53,39 @@ class Client(object):
                     break
             except Exception as e:
                 print('Exception occurred on receive')
+                break
         if (self.is_connected):
             self.disconnect()
 
     def send_msg(self):
         while self.is_connected:
             try:
-                addressee = input('Who do you wanna talk with? ').strip()
+                msg = input('Write something cute: \n').strip()
 
-                if (addressee == 'no one'):
-                    self.socket.send(bytes(addressee, 'utf8'))
-                    self.disconnect()
-                    break
+                if (len(msg) > 0):
+                    instructions = msg.split()
+                    if ('STATUS' == instructions[0]):
+                        if (len(instructions) <= 2):
+                            if (s[1] == 'ACTIVE'):
+                                self.status = ClientStatus.ACTIVE
+                            elif (s[1] == 'BUSY'):
+                                self.status = ClientStatus.BUSY
+                            elif (s[1] == 'AWAY'):
+                                self.status = ClientStatus.AWAY
+                            else:
+                                print('Invalid argument.')
 
-                msg = input('Write something cute: ').strip()
-                self.send_msg_to(addressee, msg)
+                        else:
+                            print('Invalid argument')
+
+                    msg += '\n'
+                    self.socket.send(bytes(msg, 'utf8'))
+
+                    if (msg == 'DISCONNECT'):
+                        self.disconnect()
+                        break
+
             except Exception as e:
                 print(e)
                 print('A conection error occurred, you are no longer connected to the server')
                 break
-
-    def send_msg_to(self, addressee, msg):
-        self.socket.send(bytes(addressee, 'utf8'))
-        self.socket.send(bytes(msg, 'utf8'))
