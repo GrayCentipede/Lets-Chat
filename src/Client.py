@@ -24,8 +24,8 @@ class Client(object):
     def connect(self, host, port):
         try:
             self.socket.connect((host, port))
-            self.socket.send(bytes(self.name, 'utf8'))
             self.is_connected = True
+            print('Conected to ' + host)
         except Exception as e:
             print(e)
             print('Failed to connect {}'.format(host))
@@ -43,7 +43,7 @@ class Client(object):
         return self.is_connected
 
     def receive_from_server(self):
-        msg = '...'
+        msg = "..."
         while True:
             try:
                 if (self.is_connected) and (msg):
@@ -78,6 +78,7 @@ class Client(object):
                         else:
                             print('Invalid argument')
 
+                    msg += '\n'
                     self.socket.send(bytes(msg, 'utf8'))
 
                     if (msg == 'DISCONNECT'):
