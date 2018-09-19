@@ -11,8 +11,8 @@ class Server(object):
     port = None
     server = None
     id_autoincrement = 0
-    lobbies = []
-    clients = []
+    lobbies = None
+    clients = None
     server_id = '__SERVER__'
     is_on = 0
 
@@ -35,10 +35,13 @@ class Server(object):
         self.id_autoincrement += 1
         return connection
 
-    def __init__(self, port, host = 'localhost', num_conections = 10):
+    def __init__(self, port, host = 'localhost', num_conections = 10, mode = 'normal'):
         self.host = host
         self.port = port
         self.address = (self.host, self.port)
+        self.lobbies = []
+        self.clients = []
+        self.mode = mode
         self.server = socket(AF_INET, SOCK_STREAM)
         self.server.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
         self.server_conection = self.create_new_conection(self.server_id, self.address, self.server)
@@ -50,19 +53,22 @@ class Server(object):
             self.server.listen(num_conections)
             self.lobbies.append(Room('global', 0, [], type = 'personal'))
             self.is_on = 1
-            print('Server {} is now awaiting for connections at port {}'.format(host, port))
+            if (self.mode != 'unittest'):
+                print('Server {} is now awaiting for connections at port {}'.format(host, port))
 
         except Exception as e:
-            print('An error has occurred while trying to lift the server: ' + str(e))
+            if (self.mode != 'unittest'):
+                print('An error has occurred while trying to lift the server: ' + str(e))
 
     def close(self):
-        print('Shutting down server {}'.format(self.host))
+        if (self.mode != 'unittest'):
+            print('Shutting down server {}'.format(self.host))
         self.send_msg_to_all(self.server_conection, 'The server {} is shutting down. Thanks for staying.'.format(self.host))
         self.server_status = 0
         copy = self.clients.copy()
         for client in copy:
             self.disconnect_client(client)
-            
+
         self.server.close()
 
     def get_client_by_name(self, name):
@@ -177,7 +183,8 @@ class Server(object):
                 else:
                     self.lobbies.remove(lobby)
 
-        print('User {} has disconnected'.format(client.name))
+        if (self.mode != 'unittest'):
+            print('User {} has disconnected'.format(client.name))
         self.send_msg_to_all(self.server_conection, 'User {} has disconnected'.format(client.name))
 
     def handle_event(self, client, msg):
@@ -255,10 +262,12 @@ class Server(object):
             while True:
                 msg = client.socket.recv(self.buffer_size).decode('utf8')
                 self.handle_event(client, msg)
-                print('Rooms: ' + str(self.print_rooms()))
-                print('Users: ' + str(self.print_users()))
+                if (self.mode != 'unittest'):
+                    print('Rooms: ' + str(self.print_rooms()))
+                    print('Users: ' + str(self.print_users()))
         except Exception as e:
-            print(e)
+            if (self.mode != 'unittest'):
+                print(e)
             if (client in self.clients):
                 self.disconnect_client(client)
 
@@ -292,16 +301,19 @@ class Server(object):
 
 
     def accept_conections(self):
-        print('Waiting for connections...')
+        if (self.mode != 'unittest'):
+            print('Waiting for connections...')
         while (self.is_on):
             try:
                 client_socket, client_address = self.server.accept()
-                print('{} has connected'.format(client_address))
+                if (self.mode != 'unittest'):
+                    print('{} has connected'.format(client_address))
                 client = self.create_new_conection(client_address[1], client_address[1], client_socket)
                 self.clients.append(client)
                 self.establish_communication(client)
                 Thread( target = self.handle_client, args=(client,), daemon=True).start()
             except Exception as e:
-                print(e)
+                if (self.mode != 'unittest'):
+                    print(e)
                 self.close()
                 break
