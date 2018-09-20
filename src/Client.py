@@ -1,4 +1,5 @@
 from socket import socket
+from socket import error as SocketError
 import sys
 
 from .ClientStatus import ClientStatus
@@ -31,16 +32,14 @@ class Client(object):
             self.socket.connect((host, port))
             self.is_connected = True
         except Exception as e:
-            print(e)
-            print('Failed to connect {}'.format(host))
-            sys.exit()
+            raise SocketError(e)
 
     def disconnect(self):
         try:
             self.socket.close()
             self.is_connected = False
         except Exception as e:
-            print(e)
+            raise SocketError(e)
 
     def is_online(self):
         return self.is_connected
