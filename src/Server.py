@@ -332,10 +332,20 @@ class Server(object):
         except:
             pass
 
+    def check_client(self, client):
+        try:
+            client.socket.send(bytes('...THIS MSG IS GENERATED, DO NOT WORRY'))
+        except Exception as e:
+            if (client in self.clients):
+                self.disconnect_client(client)
+
     def handle_client(self, client):
         try:
             while True:
                 msg = client.socket.recv(self.buffer_size).decode('utf8')
+                if (not msg):
+                    self.check_client(client)
+
                 self.handle_event(client, msg)
                 if (self.mode != 'unittest'):
                     print('Rooms: ' + str(self.print_rooms()))
