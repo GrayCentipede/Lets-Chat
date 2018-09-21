@@ -121,8 +121,8 @@ class Server(object):
 
 
     def users(self, client):
-        user_list = [conn.name for conn in self.clients]
-        client.socket.send(bytes(str(user_list), 'utf8'))
+        user_list = ' '.join([conn.name for conn in self.clients])
+        client.socket.send(bytes(user_list + '\n', 'utf8'))
 
     def get_personal_room(self, author_id, addressee_name):
         addressee = self.get_client_by_name(addressee_name)
@@ -241,7 +241,7 @@ class Server(object):
             client.socket.close()
         except SocketError as err:
             pass
-            
+
         self.clients.remove(client)
         global_room = self.lobbies[0]
         global_room.accepted_clients = [id for id in global_room.accepted_clients if id != client.id]
