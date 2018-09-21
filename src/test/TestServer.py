@@ -2,8 +2,8 @@ import unittest
 from socket import socket, timeout
 from threading import Thread
 from time import sleep
-from ..Server import Server
 import random
+from ..Server import Server
 
 class TestServer(unittest.TestCase):
 
@@ -19,28 +19,28 @@ class TestServer(unittest.TestCase):
         connection_1 = socket()
         connection_1.connect((self.host, self.port))
         connection_1.send(bytes('IDENTIFY Marco', 'utf8'))
-        sleep(0.0005)
+        sleep(0.005)
         client_list = self.server.clients
         conn = client_list[0]
         self.assertEqual(conn.name, 'Marco')
         connection_1.send(bytes('DISCONNECT', 'utf8'))
-        sleep(0.0005)
+        sleep(0.005)
         self.assertEqual(len(client_list), 0)
         self.server.close()
-        sleep(0.0005)
+        sleep(0.005)
 
     def test_public_msg(self):
         connection_2 = socket()
         connection_2.connect((self.host, self.port))
         connection_2.send(bytes('IDENTIFY Polo', 'utf8'))
-        sleep(0.005)
+        sleep(0.05)
         connection_2.send(bytes('PUBLICMESSAGE Hello everyone', 'utf8'))
-        sleep(0.005)
+        sleep(0.05)
         rooms = self.server.lobbies
         global_room = rooms[0]
         self.assertTrue('Polo: Hello everyone' in global_room.msg_list)
         connection_2.send(bytes('DISCONNECT', 'utf8'))
-        sleep(0.005)
+        sleep(0.05)
         self.server.close()
 
     def test_private_msg(self):
@@ -50,9 +50,9 @@ class TestServer(unittest.TestCase):
         connection_4.connect((self.host, self.port))
         connection_3.send(bytes('IDENTIFY Bones', 'utf8'))
         connection_4.send(bytes('IDENTIFY Jelly', 'utf8'))
-        sleep(0.005)
+        sleep(0.05)
         connection_4.send(bytes('MESSAGE Bones TromBONE', 'utf8'))
-        sleep(0.005)
+        sleep(0.05)
         private_room = self.server.lobbies[2]
         self.assertTrue('Jelly: TromBONE' in private_room.msg_list)
         connection_3.send(bytes('MESSAGE Jelly Good one', 'utf8'))
@@ -65,9 +65,9 @@ class TestServer(unittest.TestCase):
         connection_5 = socket()
         connection_5.connect((self.host, self.port))
         connection_5.send(bytes('IDENTIFY Bones', 'utf8'))
-        sleep(0.005)
+        sleep(0.05)
         connection_5.send(bytes('CREATEROOM Skelejokes', 'utf8'))
-        sleep(0.005)
+        sleep(0.05)
         found = False
         for room in self.server.lobbies:
             if (room.name == 'Skelejokes'):
@@ -80,18 +80,18 @@ class TestServer(unittest.TestCase):
         connection_6 = socket()
         connection_6.connect((self.host, self.port))
         connection_6.send(bytes('IDENTIFY Jelly', 'utf8'))
-        sleep(0.005)
+        sleep(0.05)
         connection_5.send(bytes('INVITE Skelejokes Jelly', 'utf8'))
-        sleep(0.005)
+        sleep(0.05)
         self.assertTrue(2 in r.invited_clients)
         connection_6.send(bytes('JOINROOM Skelejokes', 'utf8'))
-        sleep(0.005)
+        sleep(0.05)
         self.assertTrue(2 in r.accepted_clients)
         connection_5.send(bytes('ROOMESSAGE Skelejokes Bone a petit', 'utf8'))
-        sleep(0.005)
+        sleep(0.05)
         self.assertTrue('Bones: Bone a petit' in r.msg_list)
         connection_6.send(bytes('ROOMESSAGE Skelejokes Stop', 'utf8'))
-        sleep(0.005)
+        sleep(0.05)
         self.assertTrue('Jelly: Stop' in r.msg_list)
         self.server.close()
 

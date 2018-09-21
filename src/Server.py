@@ -1,4 +1,5 @@
 from socket import AF_INET, socket, SOCK_STREAM, SOL_SOCKET, SO_REUSEADDR
+from socket import error as SocketError
 from threading import Thread
 import signal
 
@@ -22,6 +23,7 @@ class Server(object):
         address = None
         socket = None
         invitations = None
+        has_identified = False
 
         def __init__(self, id, name, address, socket):
             self.id = id
@@ -51,7 +53,7 @@ class Server(object):
         try:
             self.server.bind(self.address)
             self.server.listen(num_conections)
-            self.lobbies.append(Room('global', 0, [], type = 'personal'))
+            self.lobbies.append(Room('PUBLIC', 0, [], type = 'personal'))
             self.is_on = 1
             if (self.mode != 'unittest'):
                 print('Server {} is now awaiting for connections at port {}'.format(host, port))
@@ -79,17 +81,30 @@ class Server(object):
         return None
 
     def invalid_event(self, client, num_args):
-        if (num_args != 0):
-            client.socket.send(bytes('Invalid argument, must have ' + str(num_args) + ' argument(s).', 'utf8'))
-        else:
-            client.socket.send(bytes('Invalid argument.', 'utf8'))
+        msg = []
+        msg.append('...INVALID MESSAGE\n')
+        msg.append('...VALID MESSAGES ARE:\n')
+        msg.append('...IDENTIFY username\n')
+        msg.append('...STATUS userStatus = {ACTIVE, AWAY, BUSY}\n')
+        msg.append('...MESSAGE username messageContent\n')
+        msg.append('...PUBLICMESSAGE messageContent\n')
+        msg.append('...CREATEROOM roomname\n')
+        msg.append('...INVITE roomname user1 user2...\n')
+        msg.append('...JOINROOM roomname\n')
+        msg.append('...ROOMESSAGE roomname messageContent\n')
+        msg.append('...DISCONNECT\n')
+        client.socket.send(bytes(''.join(msg), 'utf8'))
+
+    def must_identify(self, client):
+        msg ='...MUST IDENTIFY FIRST\n...TO IDENTIFY: IDENTIFY USERNAMER\n'
+        client.socket.send(bytes(msg, 'utf8'))
 
     def identify_client(self, client, name):
         conn = self.get_client_by_name(name)
         already_in_use = True if conn != None else False
 
         if (already_in_use or name == self.server_id):
-            client.socket.send(bytes('Username already in use.', 'utf8'))
+            client.socket.send(bytes('...USERNAME NOT AVAILABLE\n', 'utf8'))
 
         else:
             for lobby in self.lobbies:
@@ -101,10 +116,13 @@ class Server(object):
                     conn.name = name
                     break
 
+            client.has_identified = True
+            client.socket.send(bytes('...SUCCESFUL IDENTIFICATION\n', 'utf8'))
+
 
     def users(self, client):
-        user_list = [conn.name for conn in self.clients]
-        client.socket.send(bytes(str(user_list), 'utf8'))
+        user_list = ' '.join([conn.name for conn in self.clients])
+        client.socket.send(bytes(user_list + '\n', 'utf8'))
 
     def get_personal_room(self, author_id, addressee_name):
         addressee = self.get_client_by_name(addressee_name)
@@ -127,48 +145,103 @@ class Server(object):
     def send_msg_to(self, author, addressee, msg):
         room = self.get_personal_room(author.id, addressee)
         if (room is None):
-            author.socket.send(bytes("The user " + addressee + " doesn't exists.", 'utf8'))
+            author.socket.send(bytes("...USER "+ addressee+ " NOT FOUND\n", 'utf8'))
         else:
-            room.add_msg(author.name + ': ' + msg)
+            content = author.name + ': ' + msg
+            room.add_msg(content)
+            author.socket.send(bytes("...MESSAGE SENT\n", 'utf8'))
+            ad_conn = self.get_client_by_name(addressee)
+            ad_conn.socket.send(bytes(content+"\n", 'utf8'))
 
     def send_msg_to_all(self, author, msg):
         room = self.lobbies[0]
-        room.add_msg(author.name + ': ' + msg)
+        content = author.name + ': ' + msg
+        room.add_msg(content)
+        for conn in self.clients:
+            if (author != conn):
+                conn.socket.send(bytes('...PUBLIC-'+content+'\n', 'utf8'))
 
     def send_msg_to_room(self, room_name, author, msg):
         for lobby in self.lobbies:
             if (lobby.name == room_name):
                 if (author.id in lobby.accepted_clients):
-                    lobby.add_msg(author.name + ': ' + msg)
+                    content = author.name + ': ' + msg
+                    lobby.add_msg(content)
+                    for conn in self.clients:
+                        if (conn.id in lobby.accepted_clients):
+                            if (conn.id == author.id):
+                                author.socket.send(bytes("...MESSAGE SENT\n", 'utf8'))
+                            else:
+                                conn.socket.send(bytes('...'+ room_name +'-'+content+'\n', 'utf8'))
+                else:
+                    author.socket.send(bytes("...YOU ARE NOT PART OF THE ROOM\n", 'utf8'))
+                return
+
+        author.socket.send(bytes("...ROOM NOT EXISTS", 'utf8'))
 
 
     def create_room(self, name, owner):
+        for lobby in self.lobbies:
+            if (lobby.name == name):
+                owner.socket.send(bytes('...ROOM '+ name +' ALREADY IN USE\n', 'utf8'))
+                return
+
         r = Room(name = name, owner = owner.id, invited = [owner.id, ])
         r.accept_guest(owner.id)
         self.lobbies.append(r)
+        owner.socket.send(bytes('...ROOM CREATED\n', 'utf8'))
 
     def add_invitations(self, room_name, owner, invited):
         room = self.get_room(owner.id, room_name)
+
+        if (room == None):
+            for lobby in self.lobbies:
+                if (lobby.name == room_name and lobby.owner != owner.id):
+                    owner.socket.send(bytes('...YOU ARE NOT OWNER OF THE ROOM\n', 'utf8'))
+                    return
+
+            owner.socket.send(bytes('...ROOM NOT EXISTS\n', 'utf8'))
+            return
+
         for username in invited:
             user = self.get_client_by_name(username)
             if (user != None):
                 room.add_invitation(user.id)
                 user.invitations.append((owner.id, room.name))
+                msg_invitation = []
+                msg_invitation.append('...INVITATION TO JOIN '+ room_name +' ROOM BY '+ owner.name +'\n')
+                msg_invitation.append('...TO JOIN: JOINROOM '+ room_name +'\n')
+                content = ''.join(msg_invitation)
+                user.socket.send(bytes(content, 'utf8'))
+                owner.socket.send(bytes('...INVITATION SENT TO ' + user.name + '\n', 'utf8'))
 
 
     def join_room(self, client, room_name):
+        found = False
         for lobby in self.lobbies:
             if (lobby.name == room_name):
+                found = True
                 i = 0
                 for owner, r_name in client.invitations:
                     if (lobby.owner == owner):
                         lobby.accept_guest(client.id)
                         del client.invitations[i]
+                        client.socket.send(bytes('...SUCCESFULLY JOINED TO ROOM\n', 'utf8'))
+                        return
                     i += 1
+        if (not found):
+            client.socket.send(bytes('...ROOM NOT EXISTS\n', 'utf8'))
+        else:
+            client.socket.send(bytes('...YOU ARE NOT INVITED TO ROOM '+ room_name +'\n', 'utf8'))
+
 
     def disconnect_client(self, client):
-        client.socket.send(bytes("You're now logged off", 'utf8'))
-        client.socket.close()
+        try:
+            client.socket.send(bytes("You're now logged off", 'utf8'))
+            client.socket.close()
+        except SocketError as err:
+            pass
+
         self.clients.remove(client)
         global_room = self.lobbies[0]
         global_room.accepted_clients = [id for id in global_room.accepted_clients if id != client.id]
@@ -197,8 +270,21 @@ class Server(object):
                     self.identify_client(client, instructions[1])
                 else:
                     self.invalid_event(client, 2)
+                return
 
-            elif (event == Event.USERS):
+            elif (event == Event.DISCONNECT):
+                self.disconnect_client(client)
+                return
+
+            elif (event == Event.INVALID):
+                self.invalid_event(client, 0)
+                return
+
+            if (not client.has_identified and self.mode != 'unittest'):
+                self.must_identify(client)
+                return
+
+            if (event == Event.USERS):
                 if (len(instructions) == 1):
                     self.users(client)
                 else:
@@ -248,32 +334,39 @@ class Server(object):
                 else:
                     self.invalid_event(client, 2)
 
-            elif (event == Event.DISCONNECT):
-                self.disconnect_client(client)
-
-            else:
-                self.invalid_event(client, 0)
-
         except:
             pass
 
-    def handle_client(self, client):
+    def check_client(self, client):
         try:
-            while True:
+            client.socket.send(bytes('...THIS MSG IS GENERATED, DO NOT WORRY'))
+        except Exception as e:
+            if (client in self.clients):
+                self.disconnect_client(client)
+
+    def handle_client(self, client):
+        while True:
+            try:
+
                 msg = client.socket.recv(self.buffer_size).decode('utf8')
+                if (not msg):
+                    self.check_client(client)
+
                 self.handle_event(client, msg)
                 if (self.mode != 'unittest'):
                     print('Rooms: ' + str(self.print_rooms()))
                     print('Users: ' + str(self.print_users()))
-        except Exception as e:
-            if (self.mode != 'unittest'):
-                print(e)
-            if (client in self.clients):
-                self.disconnect_client(client)
+
+            except SocketError as e:
+                if (self.mode != 'unittest'):
+                    print(e)
+                if (client in self.clients):
+                    self.disconnect_client(client)
+                break
 
     def establish_communication(self, client):
         for lobby in self.lobbies:
-            if (lobby.name == 'global'):
+            if (lobby.name == 'PUBLIC'):
                 lobby.add_invitation(client.id)
                 lobby.accept_guest(client.id)
 
