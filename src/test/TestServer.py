@@ -2,8 +2,8 @@ import unittest
 from socket import socket, timeout
 from threading import Thread
 from time import sleep
-from ..Server import Server
 import random
+from ..Server import Server
 
 class TestServer(unittest.TestCase):
 
