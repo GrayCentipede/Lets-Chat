@@ -1,4 +1,5 @@
 from socket import AF_INET, socket, SOCK_STREAM, SOL_SOCKET, SO_REUSEADDR
+from socket import error as SocketError
 from threading import Thread
 import signal
 
@@ -235,8 +236,12 @@ class Server(object):
 
 
     def disconnect_client(self, client):
-        client.socket.send(bytes("You're now logged off", 'utf8'))
-        client.socket.close()
+        try:
+            client.socket.send(bytes("You're now logged off", 'utf8'))
+            client.socket.close()
+        except SocketError as err:
+            pass
+            
         self.clients.remove(client)
         global_room = self.lobbies[0]
         global_room.accepted_clients = [id for id in global_room.accepted_clients if id != client.id]
@@ -340,8 +345,9 @@ class Server(object):
                 self.disconnect_client(client)
 
     def handle_client(self, client):
-        try:
-            while True:
+        while True:
+            try:
+
                 msg = client.socket.recv(self.buffer_size).decode('utf8')
                 if (not msg):
                     self.check_client(client)
@@ -350,11 +356,13 @@ class Server(object):
                 if (self.mode != 'unittest'):
                     print('Rooms: ' + str(self.print_rooms()))
                     print('Users: ' + str(self.print_users()))
-        except Exception as e:
-            if (self.mode != 'unittest'):
-                print(e)
-            if (client in self.clients):
-                self.disconnect_client(client)
+
+            except SocketError as e:
+                if (self.mode != 'unittest'):
+                    print(e)
+                if (client in self.clients):
+                    self.disconnect_client(client)
+                break
 
     def establish_communication(self, client):
         for lobby in self.lobbies:
