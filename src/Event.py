@@ -10,6 +10,7 @@ class Event(Enum):
     JOINROOM = 6
     ROOMESSAGE = 7
     DISCONNECT = 8
+    STATUS = 9
     INVALID = -1
 
     @classmethod
@@ -22,6 +23,9 @@ class Event(Enum):
 
         elif (event == 'USERS'):
             return cls.USERS
+
+        elif (event == 'STATUS'):
+            return cls.STATUS
 
         elif (event == 'MESSAGE'):
             return cls.MESSAGE

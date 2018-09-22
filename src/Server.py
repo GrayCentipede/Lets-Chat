@@ -142,6 +142,16 @@ class Server(object):
 
         return None
 
+    def send_status(self, client, status):
+        if (status != 'BUSY' and status != 'AWAY' and status != 'ACTIVE'):
+            client.socket.send(bytes('...INVALID STATUS\n', 'utf8'))
+            client.socket.send(bytes('...POSSIBLE STATUS ARE: ACTIVE, AWAY, BUSY\n', 'utf8'))
+                return
+
+        for conn in self.clients:
+            if (client != conn):
+                conn.socket.send(bytes(client.name + ' ' + status +'\n', 'utf8'))
+
     def send_msg_to(self, author, addressee, msg):
         room = self.get_personal_room(author.id, addressee)
         if (room is None):
@@ -289,6 +299,12 @@ class Server(object):
                     self.users(client)
                 else:
                     self.invalid_event(client, 1)
+
+            if (event == Event.STATUS):
+                if (len(instructions) == 2):
+                    self.send_status(client, instructions[1])
+                else:
+                    self.invalid_event(client, 2)
 
             elif (event == Event.MESSAGE):
                 if (len(instructions) > 2):
