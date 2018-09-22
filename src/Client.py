@@ -36,6 +36,7 @@ class Client(object):
         try:
             self.socket.connect((host, port))
             self.is_connected = True
+            self.status = ClientStatus.ACTIVE
         except Exception as e:
             raise SocketError(e)
 
@@ -48,6 +49,9 @@ class Client(object):
 
     def is_online(self):
         return self.is_connected
+
+    def get_status(self):
+        return self.status
 
     def receive_from_server(self):
         msg = "..."
@@ -74,11 +78,11 @@ class Client(object):
                 instructions = msg.split()
                 if ('STATUS' == instructions[0]):
                     if (len(instructions) <= 2):
-                        if (s[1] == 'ACTIVE'):
+                        if (instructions[1] == 'ACTIVE'):
                             self.status = ClientStatus.ACTIVE
-                        elif (s[1] == 'BUSY'):
+                        elif (instructions[1] == 'BUSY'):
                             self.status = ClientStatus.BUSY
-                        elif (s[1] == 'AWAY'):
+                        elif (instructions[1] == 'AWAY'):
                             self.status = ClientStatus.AWAY
                         else:
                             print('Invalid argument.')
