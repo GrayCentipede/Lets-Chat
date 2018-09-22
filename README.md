@@ -48,3 +48,6 @@ To run the unit tests run the following command:
 ```
 ./setup test
 ```
+
+### Author
+* Mauricio Carrasco Ruiz
