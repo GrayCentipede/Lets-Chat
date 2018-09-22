@@ -1,6 +1,18 @@
 from enum import Enum
 
+"""
+An enumeration for the different events we can have.
+To generate HTML documentation for this module use the command:
+
+    pydoc -w src.Event
+
+"""
+
 class Event(Enum):
+    """
+    Event is an enumeration for the different events we can have.
+    """
+
     IDENTIFY = 0
     USERS = 1
     MESSAGE = 2
@@ -15,6 +27,13 @@ class Event(Enum):
 
     @classmethod
     def get_event(cls, msg):
+        """
+        Return the event that the message specified.
+
+        :param msg: The message
+        :return: The event it corresponds to.
+        """
+
         instructions = msg.split()
         event = instructions[0]
 

@@ -7,12 +7,28 @@ from .InputBox import InputBox
 from .ListBox import ListBox
 from ..ClientStatus import ClientStatus
 
+"""
+An interface for the chat.
+To generate HTML documentation for this module use the command:
+
+    pydoc -w src.ui.Chat
+
+"""
+
 class Chat(npyscreen.FormBaseNew):
+    """
+    Chat has all the widgets and functionality so that it can work with any given server (that follows the
+    given protocol)
+    """
 
     chat_rooms = None
     username = None
 
     def create(self):
+        """
+        Creates the widgets and the room chats where the messages will be stored.
+        """
+
         self.username = str(self.parentApp.client_controller.get_client_name())
         self.chat_rooms = {0: ['PUBLIC', []], 1: [self.username, []]}
 
@@ -39,6 +55,12 @@ class Chat(npyscreen.FormBaseNew):
         self.add_handlers(new_handlers)
 
     def load_chat_room(self, _input):
+        """
+        When an event is triggered it loads all the messages from a room into the msg list box.
+
+        :param _input: The input that triggered the event
+        """
+
         msgs = self.chat_rooms[self.rooms.value][1]
         self.msg_list.values = msgs
         self.msg_list.footer = self.chat_rooms[self.rooms.value][0]
@@ -46,6 +68,12 @@ class Chat(npyscreen.FormBaseNew):
 
 
     def exit_chat(self, _input = None):
+        """
+        When an event (or not) is triggered it exits the chat, ending the connection and closing the app.
+
+        :param _input: The input that triggered the event
+        """
+
         try:
             self.parentApp.client_controller.disconnect_client()
             sleep(0.05)
@@ -54,6 +82,10 @@ class Chat(npyscreen.FormBaseNew):
             self.status_box.value = str(err)
 
     def update_status(self):
+        """
+        Updates the app depending on the client's status
+        """
+
         status = self.parentApp.client_controller.get_client_status()
         if (status == ClientStatus.ACTIVE):
             self.msg_box.color = self.rooms.color = self.msg_list.colour = self.status_box.colour = 'SAFE'
@@ -67,6 +99,12 @@ class Chat(npyscreen.FormBaseNew):
         self.msg_list.display()
 
     def msg_box_clear(self, _input):
+        """
+        When an event is triggered it send the message that was in the input box.
+
+        :param _input: The input that triggered the event
+        """
+
         try:
             self.username = str(self.parentApp.client_controller.get_client_name())
             content = self.msg_box.value
@@ -94,11 +132,25 @@ class Chat(npyscreen.FormBaseNew):
         self.msg_box.display()
 
     def create_new_chat_room(self, id, name):
+        """
+        Creates a new room chat and appends it to the list of rooms available on the chat.
+
+        :param id: The id of the new room
+        :param name: The room's name
+        """
+
         self.chat_rooms[id] = [name, []]
         self.rooms.values.append(name)
 
 
     def get_chat_room(self, msg):
+        """
+        Gets the respective room so that the message can be appended and displayed
+
+        :param msg: The message
+        :return: room id, room's message list
+        """
+
         chunks = msg.split()
         # If it's a public message
         if ('...PUBLIC' in msg and '...INVALID' not in msg) or (chunks[0].count(':') == 0 and '...' not in chunks[0]):
@@ -139,6 +191,13 @@ class Chat(npyscreen.FormBaseNew):
 
 
     def append_msg_to_room(self, msg, room_msg_list):
+        """
+        Appends a message to a room's message list
+
+        :param msg: The message
+        :param room_msg_list: The room's message list
+        """
+
         # limit of characters in a single line in the msg list
         n = 119
         msg_content = msg.split('\n')
@@ -151,6 +210,12 @@ class Chat(npyscreen.FormBaseNew):
                 room_msg_list.append(content)
 
     def append_msg(self, msg):
+        """
+        Appends and displays a received message where it is supposed to be.
+
+        :param msg: The message
+        """
+        
         try:
             room_id, room_msg_list = self.get_chat_room(msg)
 

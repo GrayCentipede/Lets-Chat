@@ -5,9 +5,24 @@ from time import sleep
 import random
 from ..Server import Server
 
+"""
+Unit test to check whether or not the server can handle connections.
+To generate HTML documentation for this module use the command:
+
+    pydoc -w src.test.TestServer
+
+"""
+
 class TestServer(unittest.TestCase):
+    """
+    TestServer contains all the unit tests for the server.
+    """
 
     def setUp(self):
+        """
+        Creates a new server for every unit test.
+        """
+
         self.host = 'localhost'
         self.port = 30000 + random.randint(0, 20000)
         self.server = Server(host = self.host, port = self.port, mode = 'unittest')
@@ -16,6 +31,10 @@ class TestServer(unittest.TestCase):
         TestServer.set_up_done = True
 
     def test_accept_connection_and_disconnect(self):
+        """
+        Tests if the server accepts connections and responds accordingly in case of disconnection.
+        """
+
         connection_1 = socket()
         connection_1.connect((self.host, self.port))
         connection_1.send(bytes('IDENTIFY Marco', 'utf8'))
@@ -30,6 +49,10 @@ class TestServer(unittest.TestCase):
         sleep(0.005)
 
     def test_public_msg(self):
+        """
+        Tests if a conection can send a public message, and that everyone on the server receives it.
+        """
+
         connection_2 = socket()
         connection_2.connect((self.host, self.port))
         connection_2.send(bytes('IDENTIFY Polo', 'utf8'))
@@ -44,6 +67,10 @@ class TestServer(unittest.TestCase):
         self.server.close()
 
     def test_private_msg(self):
+        """
+        Tests if a connection can send a private message to another connection.
+        """
+
         connection_3 = socket()
         connection_4 = socket()
         connection_3.connect((self.host, self.port))
@@ -62,6 +89,10 @@ class TestServer(unittest.TestCase):
         self.server.close()
 
     def test_rooms(self):
+        """
+        Tests if the connection can create a room, invite others to it and talk to them through the room.
+        """
+        
         connection_5 = socket()
         connection_5.connect((self.host, self.port))
         connection_5.send(bytes('IDENTIFY Bones', 'utf8'))

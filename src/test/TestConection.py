@@ -6,17 +6,44 @@ from threading import Thread
 from socket import AF_INET, socket, SOCK_STREAM, timeout, SOL_SOCKET, SO_REUSEADDR
 from ..Client import Client
 
+"""
+Unit test to check whether or not the client can connect, disconnect, send and receive to and from the server.
+To generate HTML documentation for this module use the command:
+
+    pydoc -w src.test.TestConection
+
+"""
+
 class TestConection(unittest.TestCase):
+    """
+    TestConection contains the unit tests for the conections.
+    """
 
     class Conection(object):
+        """
+        Conection is a disposable class that is used in the disposable server so that there can be a
+        communication between the client and the server.
+        """
 
         def __init__(self, cl_socket, cl_address):
+            """
+            Constructs the disposable conection.
+
+            :param cl_socket: The client's socket
+            :param cl_address: The client's address
+            """
+
             self.c_socket = cl_socket
             self.c_address = cl_address
 
     set_up_done = False
 
     def handle_client(self, client):
+        """
+        Handles the events that can send the client.
+
+        :param client: The client's connection object
+        """
         while True:
             try:
                 msg = client.c_socket.recv(self.buffer_size).decode('utf8')
@@ -44,7 +71,9 @@ class TestConection(unittest.TestCase):
                 break
 
     def runnable(self):
-
+        """
+        Method that handles the connections between the server and the client.
+        """
         while True:
 
             if (self.server_status == 0):
@@ -65,6 +94,10 @@ class TestConection(unittest.TestCase):
                 self.assertTrue(False)
 
     def setUp(self):
+        """
+        Creates a disposable server for all the unit tests.
+        """
+
         self.host = 'localhost'
         self.port = 33000
         self.buffer_size = 1024
@@ -90,6 +123,10 @@ class TestConection(unittest.TestCase):
                 print('Failed to set up server.')
 
     def test_client_connect_and_disconnect(self):
+        """
+        Tests if the client can connect and disconnect to and from the server.
+        """
+
         client_1 = Client(name = 'Marco', address = 'localhost')
         client_1.connect(self.host, self.port)
         sleep(0.0005)
@@ -102,6 +139,10 @@ class TestConection(unittest.TestCase):
         self.assertEqual(self.server_counter, 0)
 
     def test_client_send_and_recv_msg(self):
+        """
+        Tests if the client can send and receive messages to and from the server.
+        """
+
         self.server_counter = 0
         client_2 = Client(name = 'Marco', address = 'localhost')
         client_2.connect(self.host, self.port)
