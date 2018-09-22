@@ -19,6 +19,9 @@ class ClientController(object):
     def client_is_connected(self):
         return self.client.is_online()
 
+    def get_client_status(self):
+        return self.client.get_status()
+
     def get_client_name(self):
         return self.client.get_name()
 

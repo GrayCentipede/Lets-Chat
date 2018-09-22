@@ -5,6 +5,7 @@ import socket
 
 from .InputBox import InputBox
 from .ListBox import ListBox
+from ..ClientStatus import ClientStatus
 
 class Chat(npyscreen.FormBaseNew):
 
@@ -23,7 +24,7 @@ class Chat(npyscreen.FormBaseNew):
         self.status_box = self.add(InputBox, name="Status", value= "...",
                      editable = False, relx=x // 4, rely = (3*y // 4), max_height = y // 15)
         self.msg_box = self.add(InputBox, name="Write something cute",
-                                footer = 'User - ' + self.username,
+                                footer = 'User - ' + self.username, color = 'SAFE',
                                 relx=x // 4)
 
         new_handlers = {
@@ -52,6 +53,19 @@ class Chat(npyscreen.FormBaseNew):
         except socket.error as err:
             self.status_box.value = str(err)
 
+    def update_status(self):
+        status = self.parentApp.client_controller.get_client_status()
+        if (status == ClientStatus.ACTIVE):
+            self.msg_box.color = self.rooms.color = self.msg_list.colour = self.status_box.colour = 'SAFE'
+        elif (status == ClientStatus.AWAY):
+            self.msg_box.color = self.rooms.color = self.msg_list.colour = self.status_box.colour = 'DANGER'
+        else:
+            self.msg_box.color = self.rooms.color = self.msg_list.colour = self.status_box.colour = 'CAUTION'
+
+        self.status_box.display()
+        self.rooms.display()
+        self.msg_list.display()
+
     def msg_box_clear(self, _input):
         try:
             self.username = str(self.parentApp.client_controller.get_client_name())
@@ -59,6 +73,7 @@ class Chat(npyscreen.FormBaseNew):
             self.parentApp.client_controller.send_msg(content)
             self.msg_box.value = ''
             self.msg_box.footer = 'User - ' + self.username
+            self.update_status()
 
             if ('IDENTIFY' in content):
                 chunks = content.split()
