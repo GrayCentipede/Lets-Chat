@@ -146,7 +146,7 @@ class Server(object):
         if (status != 'BUSY' and status != 'AWAY' and status != 'ACTIVE'):
             client.socket.send(bytes('...INVALID STATUS\n', 'utf8'))
             client.socket.send(bytes('...POSSIBLE STATUS ARE: ACTIVE, AWAY, BUSY\n', 'utf8'))
-                return
+            return
 
         for conn in self.clients:
             if (client != conn):
