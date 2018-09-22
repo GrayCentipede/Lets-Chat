@@ -1,7 +1,7 @@
 # Lets Chat
 A very simple chat made with Python.
 
-##Requirements
+## Requirements
 
 * Python >= 3.5.2
 * npyscreen
