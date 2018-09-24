@@ -39,7 +39,7 @@ python3 -m src.main_client
 ```
 python3 -m src.main_server [-b host] port number_of_conections [-d]
 ```
-Debug mode can be use to see the status of the server, see how it responds to the events that multiple users
+Debug mode can be used to see the status of the server, see how it responds to the events that multiple users
 send and check whether or not the server behaves as it should be (even though that's the reason why the unit
 tests exist.)
 
